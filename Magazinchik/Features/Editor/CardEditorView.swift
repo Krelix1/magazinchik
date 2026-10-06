@@ -44,14 +44,19 @@ struct CardEditorView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.circle)
                         .accessibilityLabel("Отменить")
                 }
+                .glassToolbarItem()
                 ToolbarItem(placement: .confirmationAction) {
                     Button(action: save) { Image(systemName: "checkmark") }
                         .buttonStyle(.glassProminent)
+                        .buttonBorderShape(.circle)
                         .disabled(!draft.canSave)
                         .accessibilityLabel("Сохранить")
                 }
+                .glassToolbarItem()
             }
             .onChange(of: photoItem) { _, item in
                 guard let item else { return }
@@ -130,17 +135,19 @@ struct CardEditorView: View {
                         Button { isScanning = true } label: {
                             GlassTileLabel(title: "Сканер", systemImage: "barcode.viewfinder")
                         }
+                        .buttonStyle(.glass)
                     }
                     if CameraPicker.isAvailable {
                         Button { isTakingPhoto = true } label: {
                             GlassTileLabel(title: "Снимок", systemImage: "camera")
                         }
+                        .buttonStyle(.glass)
                     }
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         GlassTileLabel(title: "Из фото", systemImage: "photo.on.rectangle")
                     }
+                    .buttonStyle(.glass)
                 }
-                .buttonStyle(.glass)
             }
             .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
             .listRowBackground(Color.clear)
@@ -174,11 +181,24 @@ struct CardEditorView: View {
                 .keyboardType(draft.kind.isNumericOnly ? .numberPad : .asciiCapable)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            Picker("Тип кода", selection: $draft.kind) {
-                ForEach(BarcodeKind.allCases) { kind in
-                    Text(kind.title).tag(kind)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Тип кода")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                GlassEffectContainer(spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+                        ForEach(BarcodeKind.allCases) { kind in
+                            let isSelected = draft.kind == kind
+                            Button(kind.title) { draft.kind = kind }
+                                .glassButtonStyle(prominent: isSelected)
+                                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        }
+                    }
                 }
             }
+            .padding(.vertical, 4)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         } header: {
             Text("Карта")
         } footer: {
@@ -202,7 +222,7 @@ struct CardEditorView: View {
                                 .opacity(isSelected ? 1 : 0)
                                 .frame(width: 22, height: 22)
                         }
-                        .buttonStyle(.glassProminent)
+                        .glassButtonStyle(prominent: isSelected)
                         .buttonBorderShape(.circle)
                         .tint(Color(hex: hex))
                         .accessibilityLabel(Theme.colorName(hex))
@@ -211,6 +231,7 @@ struct CardEditorView: View {
                 }
             }
             .padding(.vertical, 4)
+            .listRowBackground(Color.clear)
 
             GlassEffectContainer(spacing: 8) {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 10) {
@@ -232,18 +253,21 @@ struct CardEditorView: View {
                 }
             }
             .padding(.vertical, 4)
+            .listRowBackground(Color.clear)
 
-            HStack {
-                PhotosPicker(selection: $logoItem, matching: .images) {
-                    Label(draft.logoData == nil ? "Логотип из фото" : "Другой логотип", systemImage: "photo")
-                }
-                .buttonStyle(.glass)
-                if draft.logoData != nil {
-                    Spacer()
-                    Button("Убрать", role: .destructive) { draft.logoData = nil }
-                        .buttonStyle(.glass)
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    PhotosPicker(selection: $logoItem, matching: .images) {
+                        Label(draft.logoData == nil ? "Логотип из фото" : "Другой логотип", systemImage: "photo")
+                    }
+                    .buttonStyle(.glass)
+                    if draft.logoData != nil {
+                        Button("Убрать", role: .destructive) { draft.logoData = nil }
+                            .buttonStyle(.glass)
+                    }
                 }
             }
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -273,13 +297,14 @@ struct CardEditorView: View {
                         Label("Я сейчас здесь", systemImage: "location.fill")
                             .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.glass)
                     .disabled(location.location == nil)
                     Button { isSearchingPlace = true } label: {
                         Label("Найти адрес", systemImage: "magnifyingglass")
                             .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.glass)
                 }
-                .buttonStyle(.glass)
                 .labelStyle(.titleAndIcon)
                 .font(.subheadline.weight(.medium))
             }

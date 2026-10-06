@@ -89,14 +89,15 @@ struct CardDetailView: View {
                     Label(copiedAt == nil ? "Номер" : "Скопирован", systemImage: copiedAt == nil ? "doc.on.doc" : "checkmark")
                         .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.glass)
                 Button {
                     isEditing = true
                 } label: {
                     Label("Изменить", systemImage: "pencil")
                         .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.glass)
             }
-            .buttonStyle(.glass)
             .controlSize(.large)
         }
     }

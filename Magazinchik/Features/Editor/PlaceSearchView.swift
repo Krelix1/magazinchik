@@ -71,8 +71,11 @@ struct PlaceSearchView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.circle)
                         .accessibilityLabel("Закрыть")
                 }
+                .glassToolbarItem()
             }
         }
     }

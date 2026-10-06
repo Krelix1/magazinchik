@@ -65,6 +65,7 @@ struct NearbyView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     AddCardButton { isAdding = true }
                 }
+                .glassToolbarItem()
             }
             .navigationDestination(for: LoyaltyCard.self) { card in
                 CardDetailView(card: card, distance: snapshot.distance(for: card.id))
@@ -177,26 +178,28 @@ struct LocationAccessBanner: View {
     }
 
     private func banner(icon: String, title: String, text: String, action: String?, perform: @escaping () -> Void) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(Theme.positive)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(title)
-                    .font(.headline)
-                Text(text)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let action {
-                    Button(action, action: perform)
-                        .buttonStyle(.glassProminent)
-                        .padding(.top, 6)
+        GlassEffectContainer(spacing: 12) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundStyle(Theme.positive)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.headline)
+                    Text(text)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let action {
+                        Button(action, action: perform)
+                            .buttonStyle(.glassProminent)
+                            .padding(.top, 6)
+                    }
                 }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .padding(16)
+            .glassEffect(.regular, in: .rect(cornerRadius: 22))
         }
-        .padding(16)
-        .surface(22)
     }
 }

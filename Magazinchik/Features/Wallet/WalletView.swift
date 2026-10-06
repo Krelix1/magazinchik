@@ -67,6 +67,7 @@ struct WalletView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     AddCardButton { isAdding = true }
                 }
+                .glassToolbarItem()
             }
             .navigationDestination(for: LoyaltyCard.self) { card in
                 CardDetailView(card: card, distance: snapshot.distance(for: card.id))

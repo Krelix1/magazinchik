@@ -36,6 +36,15 @@ struct AddCardButton: View {
         Button(action: action) {
             Image(systemName: "plus")
         }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.circle)
         .accessibilityLabel("Добавить карту")
+    }
+}
+
+extension ToolbarContent {
+    /// The button draws its own glass, so the bar must not add a second plate behind it.
+    func glassToolbarItem() -> some ToolbarContent {
+        sharedBackgroundVisibility(.hidden)
     }
 }
