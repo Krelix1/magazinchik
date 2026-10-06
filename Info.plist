@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Чтобы у магазина его карта сразу оказалась первой. Геопозиция не покидает телефон.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>NearbyStore</key>
+		<string>Точная геопозиция нужна, чтобы понять, у какого магазина вы стоите.</string>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Камера считывает штрихкод или номер с вашей скидочной карты.</string>
+</dict>
+</plist>
