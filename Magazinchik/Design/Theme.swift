@@ -4,10 +4,12 @@ import UIKit
 /// Qalta-like: near-black canvas, flat surfaces with a whisper of contrast, color only as small accents.
 /// Liquid Glass is reserved for controls (tab bar, buttons) so it reads as the interactive layer.
 enum Theme {
-    static let background = Color(light: 0xF2F2F5, dark: 0x0A0A0A)
-    static let surface = Color(light: 0xFFFFFF, dark: 0x161618)
-    static let surfaceRaised = Color(light: 0xE8E8ED, dark: 0x202023)
+    static let background = Color(light: 0xF7F7F8, dark: 0x0A0A0A)
+    static let surface = Color(light: 0xFFFFFF, dark: 0x181818)
+    static let surfaceRaised = Color(light: 0xEFEFF1, dark: 0x222222)
+    /// Success only. Not the app accent — chrome stays neutral.
     static let positive = Color(hex: "30D158")
+    static let defaultCardColor = "8E8E93"
 
     static let cornerRadius: CGFloat = 22
     static let padding: CGFloat = 20
@@ -59,6 +61,31 @@ private extension UIColor {
             blue: CGFloat(rgb & 0xFF) / 255,
             alpha: 1
         )
+    }
+}
+
+/// Light capsule with a dark label. For in-content actions on the near-black canvas.
+/// Not Liquid Glass — that stays on the tab bar and the top-bar buttons.
+struct FilledContrastButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.semibold))
+            .foregroundStyle(Color.black)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(configuration.isPressed ? 0.78 : 1), in: .capsule)
+    }
+}
+
+/// Small light circle with a dark icon, for a selected control that must stay readable.
+struct FilledContrastIconStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.black)
+            .padding(6)
+            .background(Color.white, in: Circle())
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
 

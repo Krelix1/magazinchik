@@ -89,3 +89,20 @@ enum NearbyRanking {
         return NearbySnapshot(distances: distances, order: located + unlocated, suggestedID: suggested)
     }
 }
+
+/// What the card shows for its closest store, separate from jumping the card forward.
+enum NearbyStoreLabel {
+    static func caption(name: String, metres: Double?) -> String? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard let metres else { return trimmed }
+        return "\(trimmed) · \(CardText.distance(metres))"
+    }
+
+    /// The card jumps first and opens the code only inside the suggestion radius.
+    static func isActivated(metres: Double, accuracy: Double = 0) -> Bool {
+        let allowance = min(max(accuracy, 0), NearbyRanking.maxAccuracyAllowance)
+        guard accuracy <= NearbyRanking.maxAccuracyAllowance * 3 else { return false }
+        return metres <= NearbyRanking.suggestionRadius + allowance
+    }
+}

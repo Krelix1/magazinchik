@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C0DE000000000000000000C1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = C0DE000000000000000000B1 /* FirebaseAuth */; };
+		C0DE000000000000000000C2 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C0DE000000000000000000B2 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C0DE00000000000000000040 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -40,6 +45,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0DE000000000000000000C1 /* FirebaseAuth in Frameworks */,
+				C0DE000000000000000000C2 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +99,8 @@
 			);
 			name = Magazinchik;
 			packageProductDependencies = (
+				C0DE000000000000000000B1 /* FirebaseAuth */,
+				C0DE000000000000000000B2 /* FirebaseFirestore */,
 			);
 			productName = Magazinchik;
 			productReference = C0DE00000000000000000020 /* Magazinchik.app */;
@@ -149,6 +158,9 @@
 			mainGroup = C0DE00000000000000000002;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = C0DE00000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -266,7 +278,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = Z7H96XD332;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -296,7 +308,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = Z7H96XD332;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
@@ -384,6 +396,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.19.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C0DE000000000000000000B1 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		C0DE000000000000000000B2 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C0DE00000000000000000001 /* Project object */;
 }

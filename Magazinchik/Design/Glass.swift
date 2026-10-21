@@ -12,20 +12,19 @@ extension View {
     }
 }
 
-/// Wide glass action with an icon over a short caption, for rows like "Сканер · Камера · Фото".
-struct GlassTileLabel: View {
-    let title: String
-    let systemImage: String
+struct SettingsGearButton: View {
+    let action: () -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.title3)
-            Text(title)
-                .font(.caption.weight(.medium))
+        Button(action: action) {
+            Image(systemName: "gearshape")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.primary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .tint(.primary)
+        .accessibilityLabel("Настройки")
     }
 }
 
@@ -35,9 +34,12 @@ struct AddCardButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.primary)
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.glass)
         .buttonBorderShape(.circle)
+        .tint(.primary)
         .accessibilityLabel("Добавить карту")
     }
 }
@@ -46,5 +48,53 @@ extension ToolbarContent {
     /// The button draws its own glass, so the bar must not add a second plate behind it.
     func glassToolbarItem() -> some ToolbarContent {
         sharedBackgroundVisibility(.hidden)
+    }
+}
+
+/// Same glass circle as the gear and the add button. The spinner replaces the symbol only while a short location read is in flight.
+struct RefreshPlaceButton: View {
+    @Environment(LocationService.self) private var location
+    @Environment(PlaceRefresh.self) private var refresh
+
+    var body: some View {
+        Button {
+            Task { await refresh.runManual(location: location) }
+        } label: {
+            if refresh.isRunning {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: "location.fill.viewfinder")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .tint(.primary)
+        .allowsHitTesting(!refresh.isRunning)
+        .accessibilityLabel("Обновить место")
+    }
+}
+
+extension View {
+    /// «Рядом» and «Все»: refresh on the left, add then settings flush right.
+    func storeScreenToolbar(
+        isAdding: Binding<Bool>,
+        isShowingSettings: Binding<Bool>
+    ) -> some View {
+        toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                RefreshPlaceButton()
+            }
+            .glassToolbarItem()
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 8) {
+                    AddCardButton { isAdding.wrappedValue = true }
+                    SettingsGearButton { isShowingSettings.wrappedValue = true }
+                }
+            }
+            .glassToolbarItem()
+        }
     }
 }

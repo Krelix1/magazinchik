@@ -6,6 +6,8 @@ struct CardTile: View {
     let density: GridDensity
     let isSuggested: Bool
     let distance: Double?
+    var placeName: String? = nil
+    var logo: UIImage? = nil
 
     private var radius: CGFloat {
         switch density {
@@ -17,12 +19,6 @@ struct CardTile: View {
 
     var body: some View {
         content
-            .overlay {
-                if isSuggested {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Theme.positive, lineWidth: 1.5)
-                }
-            }
             .overlay(alignment: .topTrailing) {
                 if isSuggested, density != .one {
                     nearbyBadge
@@ -38,26 +34,46 @@ struct CardTile: View {
     private var content: some View {
         switch density {
         case .one:
-            CardRow(card: card, distance: distance, isSuggested: isSuggested)
+            CardRow(card: card, distance: distance, placeName: placeName, logo: logo, isSuggested: isSuggested)
         case .two:
             VStack(alignment: .leading, spacing: 0) {
-                CardIcon(card: card, size: 40)
+                CardIcon(card: card, size: 40, logo: logo)
                 Spacer(minLength: 16)
                 Text(card.storeName)
                     .font(.headline)
                     .lineLimit(1)
-                Text(distance.map(CardText.distance) ?? CardText.masked(card.number))
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(isSuggested ? Theme.positive : .secondary)
-                    .lineLimit(1)
-                    .padding(.top, 2)
+                if let placeName, !placeName.isEmpty {
+                    Text(placeName)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                    if let distance {
+                        Text(CardText.distance(distance))
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                } else if !card.note.isEmpty {
+                    Text(card.note)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                } else if let distance {
+                    Text(CardText.distance(distance))
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                }
             }
             .padding(14)
             .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
             .surface(radius)
         case .three, .four:
             VStack(spacing: 8) {
-                CardIcon(card: card, size: density == .three ? 46 : 38)
+                CardIcon(card: card, size: density == .three ? 46 : 38, logo: logo)
                 Text(card.storeName)
                     .font(density == .three ? .caption.weight(.semibold) : .caption2.weight(.semibold))
                     .lineLimit(1)
@@ -75,17 +91,17 @@ struct CardTile: View {
         if density == .two {
             Text("Рядом")
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.black)
+                .foregroundStyle(.secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Theme.positive, in: .capsule)
+                .background(Theme.surfaceRaised, in: .capsule)
                 .padding(10)
         } else {
             Image(systemName: "location.fill")
                 .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.black)
+                .foregroundStyle(.secondary)
                 .frame(width: 16, height: 16)
-                .background(Theme.positive, in: .circle)
+                .background(Theme.surfaceRaised, in: .circle)
                 .padding(6)
         }
     }

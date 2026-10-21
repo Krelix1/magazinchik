@@ -1,7 +1,7 @@
-import MapKit
+import CoreLocation
 import SwiftUI
 
-/// Find a specific store on Apple Maps and attach it to the card.
+/// Find a specific store by address and attach it to the card. Results come from OpenStreetMap.
 struct PlaceSearchView: View {
     let onPick: (PlaceDraft) -> Void
 
@@ -42,9 +42,10 @@ struct PlaceSearchView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 32, height: 32)
                     }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
+                    .buttonStyle(.plain)
                     .accessibilityLabel("Добавить \(place.name)")
                 }
                 .listRowBackground(Theme.surface)
@@ -64,6 +65,13 @@ struct PlaceSearchView: View {
                     }
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                Text(OpenStreetMap.attribution)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 6)
+            }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Магазин или адрес")
             .task(id: query) { await search() }
             .navigationTitle("Адрес магазина")
@@ -71,26 +79,57 @@ struct PlaceSearchView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
                         .accessibilityLabel("Закрыть")
                 }
-                .glassToolbarItem()
             }
         }
     }
 
     private func search() async {
-        let text = query.trimmingCharacters(in: .whitespaces)
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.count >= 2 else {
             results = []
             return
         }
-        do { try await Task.sleep(for: .milliseconds(350)) } catch { return }
         isSearching = true
         defer { isSearching = false }
-        let items = (try? await StoreLocator.search(text, near: location.location?.coordinate, radius: 20_000)) ?? []
+        do { try await Task.sleep(for: .seconds(1)) } catch { return }
         guard !Task.isCancelled else { return }
-        results = items.map { PlaceDraft($0) }
+
+        let coordinate = location.location?.coordinate
+        let origin = coordinate.map { GeoPoint(latitude: $0.latitude, longitude: $0.longitude) }
+
+        let addresses = await Self.addresses(for: text, near: coordinate)
+        guard !Task.isCancelled else { return }
+        results = PlaceSearch.results(query: text, near: origin, nearby: nil, addresses: addresses)
+
+        guard let coordinate else { return }
+        let nearby = await Self.nearbyPlaces(named: text, near: coordinate)
+        guard !Task.isCancelled else { return }
+        results = PlaceSearch.results(query: text, near: origin, nearby: nearby, addresses: addresses)
+    }
+
+    /// Address lookup. Not on the main actor, so typing stays responsive while the server answers.
+    private nonisolated static func addresses(for text: String, near coordinate: CLLocationCoordinate2D?) async -> [PlaceDraft] {
+        do {
+            return try await OpenStreetMap.geocode(text, near: coordinate)
+        } catch {
+            osmLog("address lookup failed for \(text) (\(error))")
+            return []
+        }
+    }
+
+    /// Nearby name lookup. `nil` means it failed; an empty list means the server found nothing. Neither drops addresses.
+    private nonisolated static func nearbyPlaces(named text: String, near coordinate: CLLocationCoordinate2D) async -> [PlaceDraft]? {
+        do {
+            return try await OpenStreetMap.nearbyPlaces(
+                named: text,
+                near: coordinate,
+                radius: PlaceOrdering.pickerRadius
+            )
+        } catch {
+            osmLog("nearby lookup failed for \(text), address results kept (\(error))")
+            return nil
+        }
     }
 }

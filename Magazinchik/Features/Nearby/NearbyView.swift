@@ -4,9 +4,14 @@ import SwiftUI
 struct NearbyView: View {
     let cards: [LoyaltyCard]
     let snapshot: NearbySnapshot
+    let user: GeoPoint?
+    let placeNames: [UUID: String]
+    let nearestNames: [UUID: String]
+    let logos: [UUID: UIImage]
+    let showsMapCredit: Bool
 
-    @Environment(LocationService.self) private var location
     @State private var isAdding = false
+    @State private var isShowingSettings = false
 
     private var cardsByID: [UUID: LoyaltyCard] {
         Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0) })
@@ -30,12 +35,13 @@ struct NearbyView: View {
                                 SuggestedCardHero(
                                     card: suggested,
                                     distance: snapshot.distance(for: suggested.id),
-                                    storeName: nearestStoreName(of: suggested)
+                                    storeName: nearestNames[suggested.id],
+                                    logo: logos[suggested.id]
                                 )
                             }
                             .buttonStyle(.plain)
                             .transition(.scale(scale: 0.96).combined(with: .opacity))
-                        } else if location.isAuthorized, location.location != nil {
+                        } else if user != nil {
                             NoStoreNearbyNote()
                         }
 
@@ -44,12 +50,24 @@ struct NearbyView: View {
                                 SectionLabel(title: suggested == nil ? "Ваши карты" : "Ещё")
                                 ForEach(others) { card in
                                     NavigationLink(value: card) {
-                                        CardRow(card: card, distance: snapshot.distance(for: card.id))
+                                        CardRow(
+                                            card: card,
+                                            distance: snapshot.distance(for: card.id),
+                                            placeName: placeNames[card.id],
+                                            logo: logos[card.id]
+                                        )
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
                         }
+                    }
+
+                    if showsMapCredit {
+                        Text(OpenStreetMap.attribution)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity)
                     }
                 }
                 .padding(.horizontal, Theme.padding)
@@ -61,38 +79,31 @@ struct NearbyView: View {
             .screenBackground()
             .navigationTitle("Рядом")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    AddCardButton { isAdding = true }
-                }
-                .glassToolbarItem()
-            }
+            .storeScreenToolbar(isAdding: $isAdding, isShowingSettings: $isShowingSettings)
             .navigationDestination(for: LoyaltyCard.self) { card in
                 CardDetailView(card: card, distance: snapshot.distance(for: card.id))
             }
             .sheet(isPresented: $isAdding) {
                 CardEditorView(card: nil)
             }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
+            }
         }
     }
 
-    private func nearestStoreName(of card: LoyaltyCard) -> String? {
-        guard let user = location.point else { return nil }
-        let nearest = card.locations.min { user.distance(to: $0.point) < user.distance(to: $1.point) }
-        guard let nearest else { return nil }
-        return nearest.address.isEmpty ? nearest.name : nearest.address
-    }
 }
 
 private struct SuggestedCardHero: View {
     let card: LoyaltyCard
     let distance: Double?
     let storeName: String?
+    var logo: UIImage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 14) {
-                CardIcon(card: card, size: 52)
+                CardIcon(card: card, size: 52, logo: logo)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(card.storeName)
                         .font(.title2.weight(.semibold))
@@ -103,7 +114,7 @@ private struct SuggestedCardHero: View {
                         Image(systemName: "location.fill")
                     }
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Theme.positive)
+                    .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -178,28 +189,26 @@ struct LocationAccessBanner: View {
     }
 
     private func banner(icon: String, title: String, text: String, action: String?, perform: @escaping () -> Void) -> some View {
-        GlassEffectContainer(spacing: 12) {
-            HStack(alignment: .top, spacing: 14) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundStyle(Theme.positive)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.headline)
-                    Text(text)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let action {
-                        Button(action, action: perform)
-                            .buttonStyle(.glassProminent)
-                            .padding(.top, 6)
-                    }
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.headline)
+                Text(text)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let action {
+                    Button(action, action: perform)
+                        .buttonStyle(FilledContrastButtonStyle())
+                        .padding(.top, 6)
                 }
-                Spacer(minLength: 0)
             }
-            .padding(16)
-            .glassEffect(.regular, in: .rect(cornerRadius: 22))
+            Spacer(minLength: 0)
         }
+        .padding(16)
+        .surface(22)
     }
 }
