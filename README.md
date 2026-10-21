@@ -30,7 +30,7 @@ open Magazinchik.xcodeproj
 4. Создайте базу Cloud Firestore.
 5. Опубликуйте `firestore.rules` из корня репозитория (правила Firestore в консоли или `firebase deploy --only firestore:rules`).
 6. Скачайте `GoogleService-Info.plist` и положите его в папку `Magazinchik/`, рядом с `GoogleService-Info.plist.example`. Сам plist в git не входит.
-7. Соберите приложение ещё раз. В настройках: «Создать аккаунт», затем на втором телефоне «Войти» с той же почтой.
+7. Соберите приложение ещё раз. В настройках откройте «Войти», создайте аккаунт, затем на втором телефоне войдите с той же почтой.
 
 Cloud Storage, Cloud Functions и план Blaze не нужны. Вход только по почте и паролю.
 

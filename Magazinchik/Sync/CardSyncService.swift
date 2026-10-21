@@ -297,7 +297,7 @@ final class CardSyncService {
         Firestore.firestore().collection("users").document(uid).collection("cards")
     }
 
-    private static func authMessage(_ error: Error) -> String {
+    static func authMessage(_ error: Error) -> String {
         let ns = error as NSError
         guard ns.domain == AuthErrorDomain, let code = AuthErrorCode(rawValue: ns.code) else {
             return "Не удалось войти. Попробуйте ещё раз."
@@ -305,8 +305,10 @@ final class CardSyncService {
         switch code {
         case .invalidEmail:
             return "Проверьте адрес почты."
-        case .wrongPassword, .invalidCredential, .userNotFound:
-            return "Неверная почта или пароль."
+        case .wrongPassword, .invalidCredential:
+            return "Неверный пароль."
+        case .userNotFound:
+            return "Аккаунт с этой почтой не найден."
         case .emailAlreadyInUse:
             return "Этот адрес уже зарегистрирован. Войдите."
         case .weakPassword:

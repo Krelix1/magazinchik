@@ -101,6 +101,28 @@ struct CardSyncTests {
         #expect(!text.contains("logo-bytes-DEADBEEF"))
     }
 
+    @Test func emptyFieldsAndMismatchedPasswordsStayLocal() {
+        #expect(AccountAuthForm.rejection(mode: .signIn, email: "  ", password: "secret", confirmation: "") == "Введите почту.")
+        #expect(AccountAuthForm.rejection(mode: .signIn, email: "a@b.c", password: "", confirmation: "") == "Введите пароль.")
+        #expect(AccountAuthForm.rejection(mode: .createAccount, email: "a@b.c", password: "secret", confirmation: "") == "Повторите пароль.")
+        #expect(AccountAuthForm.rejection(mode: .createAccount, email: "a@b.c", password: "secret", confirmation: "other") == "Пароли не совпадают.")
+        #expect(AccountAuthForm.rejection(mode: .signIn, email: "a@b.c", password: "secret", confirmation: "other") == nil)
+        #expect(AccountAuthForm.rejection(mode: .createAccount, email: "a@b.c", password: "secret", confirmation: "secret") == nil)
+    }
+
+    @Test func authErrorsUseTheFirebaseCases() {
+        #expect(CardSyncService.authMessage(authError(17009)) == "Неверный пароль.")
+        #expect(CardSyncService.authMessage(authError(17004)) == "Неверный пароль.")
+        #expect(CardSyncService.authMessage(authError(17011)) == "Аккаунт с этой почтой не найден.")
+        #expect(CardSyncService.authMessage(authError(17007)) == "Этот адрес уже зарегистрирован. Войдите.")
+        #expect(CardSyncService.authMessage(authError(17026)) == "Пароль должен быть не короче 6 символов.")
+        #expect(CardSyncService.authMessage(authError(17020)) == "Нет сети. Попробуйте ещё раз, когда она появится.")
+    }
+
+    private func authError(_ code: Int) -> NSError {
+        NSError(domain: "FIRAuthErrorDomain", code: code)
+    }
+
     @Test func newerTimestampWins() {
         let older = Date(timeIntervalSince1970: 1_700_000_000)
         let newer = older.addingTimeInterval(2)

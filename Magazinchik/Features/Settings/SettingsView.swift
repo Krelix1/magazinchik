@@ -33,8 +33,7 @@ struct SettingsView: View {
     @Query private var cities: [CityRecord]
     @AppStorage(AppAppearance.storageKey) private var appearanceRaw = AppAppearance.system.rawValue
     @State private var isPickingCity = false
-    @State private var email = ""
-    @State private var password = ""
+    @State private var isShowingAuth = false
 
     private var activeCityName: String {
         cities.first { $0.isActive }?.name ?? "Не выбран"
@@ -85,6 +84,9 @@ struct SettingsView: View {
             .sheet(isPresented: $isPickingCity) {
                 CityPickerView()
             }
+            .sheet(isPresented: $isShowingAuth) {
+                AccountAuthView()
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { dismiss() } label: { Image(systemName: "xmark") }
@@ -94,10 +96,6 @@ struct SettingsView: View {
         }
     }
 
-    private var canSubmitAccount: Bool {
-        email.contains("@") && password.count >= 6 && sync.phase != .signingIn
-    }
-
     @ViewBuilder
     private var accountSection: some View {
         Section {
@@ -105,30 +103,12 @@ struct SettingsView: View {
             case .unavailable:
                 LabeledContent("Синхронизация", value: sync.statusTitle)
             case .signedOut, .signingIn, .failed where sync.accountEmail == nil:
-                TextField("Эл. почта", text: $email)
-                    .textContentType(.username)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                SecureField("Пароль", text: $password)
-                    .textContentType(.password)
-                Button("Войти") {
-                    Task { await sync.signIn(email: email, password: password) }
+                Button {
+                    isShowingAuth = true
+                } label: {
+                    LabeledContent("Аккаунт", value: "Войти")
                 }
                 .foregroundStyle(.primary)
-                .disabled(!canSubmitAccount)
-                Button("Создать аккаунт") {
-                    Task { await sync.createAccount(email: email, password: password) }
-                }
-                .foregroundStyle(.primary)
-                .disabled(!canSubmitAccount)
-                if sync.phase == .signingIn {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Вход…")
-                            .foregroundStyle(.secondary)
-                    }
-                }
             default:
                 LabeledContent("Аккаунт", value: sync.accountEmail ?? "")
                 LabeledContent("Синхронизация", value: sync.statusTitle)
@@ -136,7 +116,7 @@ struct SettingsView: View {
                     sync.signOut()
                 }
             }
-            if let lastError = sync.lastError {
+            if sync.accountEmail != nil, let lastError = sync.lastError {
                 Text(lastError)
                     .font(.footnote)
                     .foregroundStyle(Color(hex: "FF453A"))
