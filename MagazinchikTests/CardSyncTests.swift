@@ -110,6 +110,25 @@ struct CardSyncTests {
         #expect(AccountAuthForm.rejection(mode: .createAccount, email: "a@b.c", password: "secret", confirmation: "secret") == nil)
     }
 
+    @Test func googleSignInNeedsRealClientIDs() {
+        #expect(GoogleSignInConfig.read(from: [:]) == nil)
+        #expect(GoogleSignInConfig.read(from: ["CLIENT_ID": ""]) == nil)
+        #expect(GoogleSignInConfig.read(from: ["CLIENT_ID": "YOUR_CLIENT_ID", "REVERSED_CLIENT_ID": "com.googleusercontent.apps.1"]) == nil)
+        #expect(GoogleSignInConfig.read(from: ["CLIENT_ID": "123.apps.googleusercontent.com"]) == nil)
+        #expect(GoogleSignInConfig.read(from: [
+            "CLIENT_ID": "123.apps.googleusercontent.com",
+            "REVERSED_CLIENT_ID": "YOUR_REVERSED_CLIENT_ID",
+        ]) == nil)
+        let ids = GoogleSignInConfig.read(from: [
+            "CLIENT_ID": " 123.apps.googleusercontent.com ",
+            "REVERSED_CLIENT_ID": "com.googleusercontent.apps.123",
+        ])
+        #expect(ids == GoogleClientIDs(
+            clientID: "123.apps.googleusercontent.com",
+            reversedClientID: "com.googleusercontent.apps.123"
+        ))
+    }
+
     @Test func authErrorsUseTheFirebaseCases() {
         #expect(CardSyncService.authMessage(authError(17009)) == "Неверный пароль.")
         #expect(CardSyncService.authMessage(authError(17004)) == "Неверный пароль.")

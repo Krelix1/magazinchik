@@ -26,13 +26,13 @@ open Magazinchik.xcodeproj
 
 1. Создайте проект в [Firebase console](https://console.firebase.google.com/) на плане Spark.
 2. Добавьте iOS-приложение с bundle id `ru.magazinchik.app`.
-3. Authentication → Sign-in method → включите Email/Password.
+3. Authentication → Sign-in method → включите Email/Password и Google.
 4. Создайте базу Cloud Firestore.
 5. Опубликуйте `firestore.rules` из корня репозитория (правила Firestore в консоли или `firebase deploy --only firestore:rules`).
 6. Скачайте `GoogleService-Info.plist` и положите его в папку `Magazinchik/`, рядом с `GoogleService-Info.plist.example`. Сам plist в git не входит.
 7. Соберите приложение ещё раз. В настройках откройте «Войти», создайте аккаунт, затем на втором телефоне войдите с той же почтой.
 
-Cloud Storage, Cloud Functions и план Blaze не нужны. Вход только по почте и паролю.
+Cloud Storage, Cloud Functions и план Blaze не нужны. Вход по почте и паролю. «Продолжить с Google» читает `CLIENT_ID` из plist и скрывается, если его нет. Сборка прописывает `REVERSED_CLIENT_ID` как URL scheme, чтобы Google мог вернуть в приложение.
 
 ## Что умеет
 

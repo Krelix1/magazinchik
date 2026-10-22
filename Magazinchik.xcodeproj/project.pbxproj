@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C0DE000000000000000000C1 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = C0DE000000000000000000B1 /* FirebaseAuth */; };
 		C0DE000000000000000000C2 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C0DE000000000000000000B2 /* FirebaseFirestore */; };
+		C0DE000000000000000000C3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = C0DE000000000000000000B3 /* GoogleSignIn */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,7 @@
 			files = (
 				C0DE000000000000000000C1 /* FirebaseAuth in Frameworks */,
 				C0DE000000000000000000C2 /* FirebaseFirestore in Frameworks */,
+				C0DE000000000000000000C3 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -89,6 +91,7 @@
 				C0DE00000000000000000052 /* Sources */,
 				C0DE00000000000000000050 /* Frameworks */,
 				C0DE00000000000000000054 /* Resources */,
+				C0DE00000000000000000056 /* Register Google URL scheme */,
 			);
 			buildRules = (
 			);
@@ -101,6 +104,7 @@
 			packageProductDependencies = (
 				C0DE000000000000000000B1 /* FirebaseAuth */,
 				C0DE000000000000000000B2 /* FirebaseFirestore */,
+				C0DE000000000000000000B3 /* GoogleSignIn */,
 			);
 			productName = Magazinchik;
 			productReference = C0DE00000000000000000020 /* Magazinchik.app */;
@@ -157,10 +161,11 @@
 			);
 			mainGroup = C0DE00000000000000000002;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				C0DE000000000000000000A2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = C0DE00000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -280,6 +285,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z7H96XD332;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Магазинчик";
@@ -310,6 +316,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z7H96XD332;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Магазинчик";
@@ -397,6 +404,29 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		C0DE00000000000000000056 /* Register Google URL scheme */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/register-google-url-scheme.sh",
+			);
+			name = "Register Google URL scheme";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/scripts/register-google-url-scheme.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -404,6 +434,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 12.19.2;
+			};
+		};
+		C0DE000000000000000000A2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.2.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -418,6 +456,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0DE000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		C0DE000000000000000000B3 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0DE000000000000000000A2 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

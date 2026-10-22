@@ -26,6 +26,9 @@ struct MagazinchikApp: App {
             RootView()
                 .environment(location)
                 .environment(sync)
+                .onOpenURL { url in
+                    GoogleSignInBridge.handle(url)
+                }
         }
         .modelContainer(AppModelStore.container)
     }

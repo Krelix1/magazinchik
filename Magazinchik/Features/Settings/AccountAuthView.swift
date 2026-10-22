@@ -41,7 +41,15 @@ struct AccountAuthView: View {
     @State private var confirmation = ""
     @State private var passwordVisible = false
     @State private var confirmationVisible = false
+    @State private var googleInFlight = false
     @State private var message: String?
+    @FocusState private var focusedField: AccountField?
+
+    private enum AccountField: Hashable {
+        case email
+        case password
+        case confirmation
+    }
 
     private var busy: Bool { sync.phase == .signingIn }
 
@@ -72,6 +80,7 @@ struct AccountAuthView: View {
                         passwordField(
                             text: $password,
                             prompt: "Пароль",
+                            field: .password,
                             visible: $passwordVisible,
                             contentType: mode == .signIn ? .password : .newPassword
                         )
@@ -79,24 +88,45 @@ struct AccountAuthView: View {
                             passwordField(
                                 text: $confirmation,
                                 prompt: "Пароль ещё раз",
+                                field: .confirmation,
                                 visible: $confirmationVisible,
                                 contentType: .newPassword
                             )
                         }
                     }
 
-                    Button {
-                        Task { await submit() }
-                    } label: {
-                        Text(busy ? progressTitle : actionTitle)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.black.opacity(busy ? 0.45 : 1))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.white.opacity(busy ? 0.45 : 1), in: Capsule())
+                    VStack(spacing: 12) {
+                        Button {
+                            Task { await submit() }
+                        } label: {
+                            Text(busy && !googleInFlight ? progressTitle : actionTitle)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.black.opacity(busy ? 0.45 : 1))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.white.opacity(busy ? 0.45 : 1), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(busy)
+
+                        if sync.googleSignInAvailable {
+                            Button {
+                                Task { await submitGoogle() }
+                            } label: {
+                                Text(googleInFlight ? "Вход…" : "Продолжить с Google")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Color.white.opacity(busy ? 0.45 : 1))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(
+                                        Color(hex: "161618").opacity(busy ? 0.45 : 1),
+                                        in: .rect(cornerRadius: 22, style: .continuous)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(busy)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(busy)
 
                     if let message {
                         Text(message)
@@ -151,17 +181,22 @@ struct AccountAuthView: View {
         .keyboardType(.emailAddress)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
+        .focused($focusedField, equals: .email)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
+        .contentShape(.rect(cornerRadius: 22, style: .continuous))
+        .onTapGesture { focusedField = .email }
         .background(Color(hex: "161618"), in: .rect(cornerRadius: 22, style: .continuous))
     }
 
     private func passwordField(
         text: Binding<String>,
         prompt: String,
+        field: AccountField,
         visible: Binding<Bool>,
         contentType: UITextContentType
     ) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             Group {
                 if visible.wrappedValue {
                     TextField(prompt, text: text, prompt: Text(prompt).foregroundStyle(.secondary))
@@ -172,18 +207,26 @@ struct AccountAuthView: View {
             .textContentType(contentType)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .focused($focusedField, equals: field)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 16)
+            .padding(.leading, 16)
+            .contentShape(Rectangle())
+            .onTapGesture { focusedField = field }
             Button {
                 visible.wrappedValue.toggle()
+                focusedField = field
             } label: {
                 Image(systemName: visible.wrappedValue ? "eye.slash" : "eye")
                     .font(.body)
                     .foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .padding(.trailing, 8)
             .accessibilityLabel(visible.wrappedValue ? "Скрыть пароль" : "Показать пароль")
         }
-        .padding(16)
         .background(Color(hex: "161618"), in: .rect(cornerRadius: 22, style: .continuous))
     }
 
@@ -213,6 +256,16 @@ struct AccountAuthView: View {
         }
         if sync.accountEmail == nil {
             message = sync.lastError ?? "Не удалось войти. Попробуйте ещё раз."
+        }
+    }
+
+    private func submitGoogle() async {
+        message = nil
+        googleInFlight = true
+        await sync.signInWithGoogle()
+        googleInFlight = false
+        if sync.accountEmail == nil {
+            message = sync.lastError
         }
     }
 }

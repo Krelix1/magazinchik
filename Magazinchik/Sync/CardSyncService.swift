@@ -69,8 +69,34 @@ final class CardSyncService {
         await authenticate(email: email, password: password, create: true)
     }
 
+    var googleSignInAvailable: Bool {
+        FirebaseGate.isConfigured && GoogleSignInConfig.current != nil
+    }
+
+    func signInWithGoogle() async {
+        guard FirebaseGate.isConfigured, let clientID = GoogleSignInConfig.current?.clientID else {
+            phase = .unavailable
+            return
+        }
+        phase = .signingIn
+        lastError = nil
+        do {
+            let credential = try await GoogleSignInBridge.credential(clientID: clientID)
+            try await Auth.auth().signIn(with: credential)
+        } catch {
+            if GoogleSignInBridge.isCancellation(error) {
+                lastError = nil
+                phase = .signedOut
+                return
+            }
+            lastError = Self.authMessage(error)
+            phase = .failed
+        }
+    }
+
     func signOut() {
         guard FirebaseGate.isConfigured else { return }
+        GoogleSignInBridge.signOut()
         do {
             try Auth.auth().signOut()
             lastError = nil
@@ -316,7 +342,7 @@ final class CardSyncService {
         case .networkError:
             return "Нет сети. Попробуйте ещё раз, когда она появится."
         case .operationNotAllowed:
-            return "В Firebase не включён вход по почте."
+            return "В Firebase не включён этот способ входа."
         case .tooManyRequests:
             return "Слишком много попыток. Подождите немного."
         default:
