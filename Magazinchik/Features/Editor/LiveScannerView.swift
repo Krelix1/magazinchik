@@ -31,7 +31,7 @@ struct LiveScannerScreen: View {
                     Button("Открыть Настройки") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(FilledContrastButtonStyle())
                 }
                 .foregroundStyle(.white)
             case .none:

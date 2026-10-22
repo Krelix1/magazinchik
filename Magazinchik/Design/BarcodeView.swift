@@ -107,30 +107,21 @@ enum BarcodeRenderer {
     }
 }
 
-/// White plate with the code and the human-readable number under it.
+/// White plate with the scannable code. The digits stay off the plate.
 struct BarcodePlate: View {
     let kind: BarcodeKind
     let number: String
     var codeHeight: CGFloat = 110
 
     var body: some View {
-        VStack(spacing: 10) {
-            if kind != .none {
-                BarcodeView(kind: kind, payload: number)
-                    .frame(height: kind.isTwoDimensional ? codeHeight * 1.8 : codeHeight)
-                    .frame(maxWidth: kind.isTwoDimensional ? codeHeight * 1.8 : .infinity)
-            }
-            Text(CardText.grouped(number))
-                .font(kind == .none ? .system(.title, design: .monospaced, weight: .semibold) : .system(.callout, design: .monospaced))
-                .foregroundStyle(.black)
-                .textSelection(.enabled)
-                .minimumScaleFactor(0.6)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
+        if kind != .none {
+            BarcodeView(kind: kind, payload: number)
+                .frame(height: kind.isTwoDimensional ? codeHeight * 1.8 : codeHeight)
+                .frame(maxWidth: kind.isTwoDimensional ? codeHeight * 1.8 : .infinity)
+                .padding(.vertical, 20)
+                .padding(.horizontal, 22)
+                .frame(maxWidth: .infinity)
+                .background(.white, in: .rect(cornerRadius: 20, style: .continuous))
         }
-        .padding(.vertical, 20)
-        .padding(.horizontal, 22)
-        .frame(maxWidth: .infinity)
-        .background(.white, in: .rect(cornerRadius: 20, style: .continuous))
     }
 }

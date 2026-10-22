@@ -6,7 +6,7 @@ struct CardDraft {
     var storeName = ""
     var number = ""
     var kind: BarcodeKind = .ean13
-    var colorHex = Theme.palette[0]
+    var colorHex = Theme.defaultCardColor
     var symbolName = Theme.symbols[0]
     var logoData: Data?
     var note = ""
@@ -34,10 +34,7 @@ struct CardDraft {
     var trimmedName: String { storeName.trimmingCharacters(in: .whitespacesAndNewlines) }
     var trimmedNumber: String { number.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    var searchQuery: String {
-        let query = brandQuery.trimmingCharacters(in: .whitespaces)
-        return query.isEmpty ? trimmedName : query
-    }
+    var searchQuery: String { trimmedName }
 
     var numberProblem: String? { kind.problem(with: trimmedNumber) }
 
@@ -56,11 +53,18 @@ struct CardDraft {
         card.brandQuery = brandQuery.trimmingCharacters(in: .whitespaces)
         card.findsStoresAutomatically = findsStoresAutomatically
 
-        let replaced = card.locations.filter { $0.isUserDefined || searchChanged }
-        card.locations.removeAll { replaced.contains($0) }
-        replaced.forEach { context.delete($0) }
-        card.locations.append(contentsOf: places.map { $0.makeLocation(isUserDefined: true) })
+        let removing = card.locations.filter { $0.isUserDefined || searchChanged }
+        for location in removing {
+            context.delete(location)
+        }
+        for place in places {
+            let location = place.makeLocation(isUserDefined: true)
+            location.card = card
+            context.insert(location)
+        }
 
         if searchChanged { card.invalidateStoreSearch() }
+        card.contentRevision += 1
+        card.updatedAt = Date()
     }
 }

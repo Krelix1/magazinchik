@@ -1,24 +1,25 @@
 import SwiftUI
 import UIKit
 
-/// The store "logo": a photo if the person picked one, otherwise a symbol on a tinted rounded square.
+/// The store "logo": a photo if one is already decoded, otherwise a symbol on a tinted rounded square.
+/// Drawing this never reads the stored image bytes and never decodes them.
 struct CardIcon: View {
     let symbolName: String
     let colorHex: String
-    var logoData: Data?
+    var logo: UIImage?
     var size: CGFloat = 44
 
-    init(card: LoyaltyCard, size: CGFloat = 44) {
+    init(card: LoyaltyCard, size: CGFloat = 44, logo: UIImage? = nil) {
         self.symbolName = card.symbolName
         self.colorHex = card.colorHex
-        self.logoData = card.logoImageData
+        self.logo = logo
         self.size = size
     }
 
-    init(symbolName: String, colorHex: String, logoData: Data? = nil, size: CGFloat = 44) {
+    init(symbolName: String, colorHex: String, logo: UIImage? = nil, size: CGFloat = 44) {
         self.symbolName = symbolName
         self.colorHex = colorHex
-        self.logoData = logoData
+        self.logo = logo
         self.size = size
     }
 
@@ -26,8 +27,8 @@ struct CardIcon: View {
         let color = Color(hex: colorHex)
         let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
         Group {
-            if let logoData, let image = UIImage(data: logoData) {
-                Image(uiImage: image)
+            if let logo {
+                Image(uiImage: logo)
                     .resizable()
                     .scaledToFill()
             } else {
@@ -42,4 +43,41 @@ struct CardIcon: View {
         .clipShape(shape)
         .accessibilityHidden(true)
     }
+}
+
+/// Decoded logos, filled off the main actor when a card changes. A tab switch only reads this.
+final class LogoMemory: @unchecked Sendable {
+    static let shared = LogoMemory()
+
+    private let lock = NSLock()
+    private var images: [UUID: UIImage] = [:]
+
+    func replace(with payloads: [LogoPayload]) {
+        var next: [UUID: UIImage] = [:]
+        for payload in payloads {
+            if let image = UIImage(data: payload.data) {
+                next[payload.id] = image
+            }
+        }
+        lock.lock()
+        images = next
+        lock.unlock()
+    }
+
+    func image(for id: UUID) -> UIImage? {
+        lock.lock()
+        defer { lock.unlock() }
+        return images[id]
+    }
+
+    func snapshot() -> [UUID: UIImage] {
+        lock.lock()
+        defer { lock.unlock() }
+        return images
+    }
+}
+
+struct LogoPayload: Sendable {
+    var id: UUID
+    var data: Data
 }

@@ -1,4 +1,3 @@
-import MapKit
 import SwiftData
 import SwiftUI
 import UIKit
@@ -10,12 +9,14 @@ struct CardDetailView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(CardSyncService.self) private var sync
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocationService.self) private var location
 
     @State private var isEditing = false
     @State private var isConfirmingDelete = false
     @State private var copiedAt: Date?
+    @State private var isShowingStoresMap = false
 
     var body: some View {
         ScrollView {
@@ -33,8 +34,14 @@ struct CardDetailView: View {
                         .surface(20)
                 }
 
-                if !card.locations.isEmpty {
-                    StoresSection(card: card, user: location.point)
+                if !card.automaticPlaces.isEmpty {
+                    StoresSection(card: card, user: location.point) {
+                        isShowingStoresMap = true
+                    }
+                }
+
+                if !card.userPlaces.isEmpty {
+                    MyPlacesSection(card: card, user: location.point)
                 }
 
                 Button(role: .destructive) {
@@ -61,6 +68,9 @@ struct CardDetailView: View {
         .sheet(isPresented: $isEditing) {
             CardEditorView(card: card)
         }
+        .sheet(isPresented: $isShowingStoresMap) {
+            StoresMapView(stores: storePins, user: location.point)
+        }
         .confirmationDialog("Удалить карту «\(card.storeName)»?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
             Button("Удалить", role: .destructive, action: delete)
         }
@@ -69,17 +79,34 @@ struct CardDetailView: View {
 
     private var header: some View {
         VStack(spacing: 10) {
-            CardIcon(card: card, size: 64)
+            CardIcon(card: card, size: 64, logo: LogoMemory.shared.image(for: card.id))
             Text(card.storeName)
                 .font(.largeTitle.weight(.bold))
                 .multilineTextAlignment(.center)
-            if let distance {
+            if let caption = nearestCaption {
+                Text(caption)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                if card.hasAutomaticPlaces {
+                    Text(OpenStreetMap.attribution)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            } else if let distance {
                 Label("\(CardText.distance(distance)) до магазина", systemImage: "location.fill")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(distance <= NearbyRanking.releaseRadius ? Theme.positive : .secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.top, 4)
+    }
+
+    /// Closest store and how far it is. Shown past the 200 m activation distance; it does not open the code.
+    private var nearestCaption: String? {
+        guard let nearest = card.nearestAutomaticLocation(to: location.point) else { return nil }
+        let metres = location.point?.distance(to: nearest.point)
+        return NearbyStoreLabel.caption(name: nearest.name, metres: metres)
     }
 
     private var actions: some View {
@@ -89,16 +116,21 @@ struct CardDetailView: View {
                     Label(copiedAt == nil ? "Номер" : "Скопирован", systemImage: copiedAt == nil ? "doc.on.doc" : "checkmark")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glass)
                 Button {
                     isEditing = true
                 } label: {
                     Label("Изменить", systemImage: "pencil")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.glass)
             }
+            .buttonStyle(.glass)
             .controlSize(.large)
+        }
+    }
+
+    private var storePins: [StoreMapPin] {
+        card.automaticPlaces.map {
+            StoreMapPin(id: $0.id, name: $0.name, street: $0.address, latitude: $0.latitude, longitude: $0.longitude)
         }
     }
 
@@ -113,10 +145,12 @@ struct CardDetailView: View {
 
     private func delete() {
         let card = card
+        let cardID = card.id
         dismiss()
         // Delete after the pop so the detail view never renders a deleted model.
         Task {
             try? await Task.sleep(for: .milliseconds(450))
+            sync.delete(cardID)
             context.delete(card)
             try? context.save()
         }
@@ -126,10 +160,12 @@ struct CardDetailView: View {
 private struct StoresSection: View {
     let card: LoyaltyCard
     let user: GeoPoint?
+    let onShowMap: () -> Void
 
     private var sortedLocations: [StoreLocation] {
-        guard let user else { return card.locations.sorted { $0.name < $1.name } }
-        return card.locations.sorted { user.distance(to: $0.point) < user.distance(to: $1.point) }
+        let stores = card.automaticPlaces
+        guard let user else { return stores.sorted { $0.name < $1.name } }
+        return stores.sorted { user.distance(to: $0.point) < user.distance(to: $1.point) }
     }
 
     var body: some View {
@@ -137,21 +173,59 @@ private struct StoresSection: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(title: "Магазины", trailing: "\(locations.count)")
 
-            Map(initialPosition: .automatic) {
-                ForEach(locations.prefix(20)) { place in
-                    Marker(place.name, systemImage: card.symbolName, coordinate: CLLocationCoordinate2D(latitude: place.latitude, longitude: place.longitude))
-                        .tint(Color(hex: card.colorHex))
+            VStack(spacing: 0) {
+                ForEach(locations) { place in
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(place.name)
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                            Text(place.address)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 8)
+                        if let user {
+                            Text(CardText.distance(user.distance(to: place.point)))
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                UserAnnotation()
             }
-            .mapStyle(.standard(pointsOfInterest: .excludingAll))
-            .frame(height: 200)
-            .clipShape(.rect(cornerRadius: 22, style: .continuous))
+            .surface(20)
+
+            Button(action: onShowMap) {
+                Label("На карте", systemImage: "map")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(FilledContrastButtonStyle())
+        }
+    }
+}
+
+private struct MyPlacesSection: View {
+    let card: LoyaltyCard
+    let user: GeoPoint?
+
+    private var sortedLocations: [StoreLocation] {
+        let mine = card.userPlaces
+        guard let user else { return mine.sorted { $0.name < $1.name } }
+        return mine.sorted { user.distance(to: $0.point) < user.distance(to: $1.point) }
+    }
+
+    var body: some View {
+        let locations = sortedLocations
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(title: "Мои места", trailing: "\(locations.count)")
 
             VStack(spacing: 0) {
-                ForEach(locations.prefix(3)) { place in
+                ForEach(locations) { place in
                     HStack(spacing: 12) {
-                        Image(systemName: place.isUserDefined ? "mappin" : "building.2")
+                        Image(systemName: "mappin")
                             .foregroundStyle(.secondary)
                             .frame(width: 20)
                         VStack(alignment: .leading, spacing: 2) {

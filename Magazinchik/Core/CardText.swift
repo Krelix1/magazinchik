@@ -93,12 +93,13 @@ enum CardText {
             .filter { $0.isLetter || $0.isNumber }
     }
 
-    /// Whether a map search result named `placeName` belongs to the brand `brand`.
+    /// Whether a map place belongs to the card. The card name has to start the place name:
+    /// «Санта» matches «Санта - 54»; the hyphen and the number do not make it a different store.
     static func place(_ placeName: String, matchesBrand brand: String) -> Bool {
         let place = normalizedName(placeName)
         let brand = normalizedName(brand)
         guard !place.isEmpty, brand.count >= 2 else { return false }
-        return place.contains(brand) || (place.count >= 4 && brand.contains(place))
+        return place.hasPrefix(brand) || (place.count >= 4 && brand.hasPrefix(place))
     }
 }
 

@@ -9,6 +9,7 @@ struct CardEditorView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(LocationService.self) private var location
+    @Environment(CardSyncService.self) private var sync
 
     @State private var draft: CardDraft
     @State private var importStatus: ImportStatus = .idle
@@ -17,6 +18,10 @@ struct CardEditorView: View {
     @State private var isScanning = false
     @State private var isTakingPhoto = false
     @State private var isSearchingPlace = false
+    @State private var isDroppingPin = false
+    @State private var isSavingCard = false
+    @State private var storeLoad: Task<Void, Never>?
+    @State private var previewLogo: UIImage?
 
     init(card: LoyaltyCard?) {
         self.card = card
@@ -43,17 +48,22 @@ struct CardEditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.glass)
-                        .buttonBorderShape(.circle)
+                    Button {
+                        storeLoad?.cancel()
+                        dismiss()
+                    } label: { Image(systemName: "xmark") }
                         .accessibilityLabel("Отменить")
                 }
-                .glassToolbarItem()
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(action: save) { Image(systemName: "checkmark") }
-                        .buttonStyle(.glassProminent)
+                    Button(action: save) {
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                        .buttonStyle(.glass)
                         .buttonBorderShape(.circle)
-                        .disabled(!draft.canSave)
+                        .tint(.primary)
+                        .disabled(!draft.canSave || isSavingCard)
                         .accessibilityLabel("Сохранить")
                 }
                 .glassToolbarItem()
@@ -96,6 +106,38 @@ struct CardEditorView: View {
                     draft.places.append(place)
                 }
             }
+            .sheet(isPresented: $isDroppingPin) {
+                PinDropView(initial: location.location?.coordinate) { coordinate in
+                    let name = draft.trimmedName.isEmpty ? "Мой магазин" : draft.trimmedName
+                    draft.places.append(PlaceDraft(
+                        name: name,
+                        address: "Отмечено на карте",
+                        latitude: coordinate.latitude,
+                        longitude: coordinate.longitude
+                    ))
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if isSavingCard {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Загружаем магазины…")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.bottom, 8)
+                }
+            }
+            .task(id: draft.logoData) {
+                let data = draft.logoData
+                guard let data else {
+                    previewLogo = nil
+                    return
+                }
+                let image = await Task.detached { UIImage(data: data) }.value
+                if !Task.isCancelled { previewLogo = image }
+            }
             .sensoryFeedback(trigger: importStatus) { _, new in
                 switch new {
                 case .found: .success
@@ -111,7 +153,7 @@ struct CardEditorView: View {
     private var preview: some View {
         Section {
             VStack(spacing: 14) {
-                CardIcon(symbolName: draft.symbolName, colorHex: draft.colorHex, logoData: draft.logoData, size: 56)
+                CardIcon(symbolName: draft.symbolName, colorHex: draft.colorHex, logo: previewLogo, size: 56)
                 Text(draft.trimmedName.isEmpty ? "Новая карта" : draft.trimmedName)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(draft.trimmedName.isEmpty ? .secondary : .primary)
@@ -129,27 +171,23 @@ struct CardEditorView: View {
 
     private var importSection: some View {
         Section {
-            GlassEffectContainer(spacing: 10) {
-                HStack(spacing: 10) {
-                    if LiveScannerScreen.isSupported {
-                        Button { isScanning = true } label: {
-                            GlassTileLabel(title: "Сканер", systemImage: "barcode.viewfinder")
-                        }
-                        .buttonStyle(.glass)
+            HStack(spacing: 8) {
+                if LiveScannerScreen.isSupported {
+                    Button { isScanning = true } label: {
+                        PhotoSourceLabel(title: "Сканер", systemImage: "barcode.viewfinder")
                     }
-                    if CameraPicker.isAvailable {
-                        Button { isTakingPhoto = true } label: {
-                            GlassTileLabel(title: "Снимок", systemImage: "camera")
-                        }
-                        .buttonStyle(.glass)
+                }
+                if CameraPicker.isAvailable {
+                    Button { isTakingPhoto = true } label: {
+                        PhotoSourceLabel(title: "Снимок", systemImage: "camera")
                     }
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        GlassTileLabel(title: "Из фото", systemImage: "photo.on.rectangle")
-                    }
-                    .buttonStyle(.glass)
+                }
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    PhotoSourceLabel(title: "Из фото", systemImage: "photo.on.rectangle")
                 }
             }
-            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            .buttonStyle(EvenFillButtonStyle())
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
             .listRowBackground(Color.clear)
         } header: {
             Text("Заполнить с фото")
@@ -181,24 +219,11 @@ struct CardEditorView: View {
                 .keyboardType(draft.kind.isNumericOnly ? .numberPad : .asciiCapable)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Тип кода")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-                GlassEffectContainer(spacing: 8) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
-                        ForEach(BarcodeKind.allCases) { kind in
-                            let isSelected = draft.kind == kind
-                            Button(kind.title) { draft.kind = kind }
-                                .glassButtonStyle(prominent: isSelected)
-                                .accessibilityAddTraits(isSelected ? .isSelected : [])
-                        }
-                    }
+            Picker("Тип кода", selection: $draft.kind) {
+                ForEach(BarcodeKind.allCases) { kind in
+                    Text(kind.title).tag(kind)
                 }
             }
-            .padding(.vertical, 4)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
         } header: {
             Text("Карта")
         } footer: {
@@ -222,7 +247,7 @@ struct CardEditorView: View {
                                 .opacity(isSelected ? 1 : 0)
                                 .frame(width: 22, height: 22)
                         }
-                        .glassButtonStyle(prominent: isSelected)
+                        .buttonStyle(.glassProminent)
                         .buttonBorderShape(.circle)
                         .tint(Color(hex: hex))
                         .accessibilityLabel(Theme.colorName(hex))
@@ -231,7 +256,6 @@ struct CardEditorView: View {
                 }
             }
             .padding(.vertical, 4)
-            .listRowBackground(Color.clear)
 
             GlassEffectContainer(spacing: 8) {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 10) {
@@ -253,34 +277,24 @@ struct CardEditorView: View {
                 }
             }
             .padding(.vertical, 4)
-            .listRowBackground(Color.clear)
 
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    PhotosPicker(selection: $logoItem, matching: .images) {
-                        Label(draft.logoData == nil ? "Логотип из фото" : "Другой логотип", systemImage: "photo")
-                    }
-                    .buttonStyle(.glass)
-                    if draft.logoData != nil {
-                        Button("Убрать", role: .destructive) { draft.logoData = nil }
-                            .buttonStyle(.glass)
-                    }
+            HStack {
+                PhotosPicker(selection: $logoItem, matching: .images) {
+                    Label(draft.logoData == nil ? "Логотип из фото" : "Другой логотип", systemImage: "photo")
+                }
+                .buttonStyle(.glass)
+                if draft.logoData != nil {
+                    Spacer()
+                    Button("Убрать", role: .destructive) { draft.logoData = nil }
+                        .buttonStyle(.glass)
                 }
             }
-            .listRowBackground(Color.clear)
         }
     }
 
     private var placesSection: some View {
         Section {
             Toggle("Находить магазины сети рядом", isOn: $draft.findsStoresAutomatically)
-            if draft.findsStoresAutomatically {
-                TextField(
-                    "Как искать на карте",
-                    text: $draft.brandQuery,
-                    prompt: Text(draft.trimmedName.isEmpty ? "Название сети" : draft.trimmedName)
-                )
-            }
             ForEach(draft.places) { place in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(place.name)
@@ -291,29 +305,22 @@ struct CardEditorView: View {
             }
             .onDelete { draft.places.remove(atOffsets: $0) }
 
-            GlassEffectContainer(spacing: 10) {
-                HStack(spacing: 10) {
-                    Button(action: addCurrentLocation) {
-                        Label("Я сейчас здесь", systemImage: "location.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glass)
-                    .disabled(location.location == nil)
-                    Button { isSearchingPlace = true } label: {
-                        Label("Найти адрес", systemImage: "magnifyingglass")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glass)
-                }
-                .labelStyle(.titleAndIcon)
-                .font(.subheadline.weight(.medium))
+            Button(action: addCurrentLocation) {
+                Label("Я сейчас здесь", systemImage: "location.fill")
             }
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-            .listRowBackground(Color.clear)
+            .disabled(location.location == nil)
+            Button { isSearchingPlace = true } label: {
+                Label("Найти адрес", systemImage: "magnifyingglass")
+            }
+            Button { isDroppingPin = true } label: {
+                Label("Указать на карте", systemImage: "mappin.and.ellipse")
+            }
         } header: {
             Text("Где пользуюсь")
         } footer: {
-            Text("Когда вы окажетесь у одного из этих магазинов, карта сама встанет первой. Магазины сети ищутся на Картах Apple по названию.")
+            Text(draft.findsStoresAutomatically
+                ? "Когда вы окажетесь у магазина этой сети, карта сама встанет первой. Точки сети загружаются один раз для выбранного города. \(OpenStreetMap.attribution)"
+                : "Когда вы окажетесь у одного из этих магазинов, карта сама встанет первой.")
         }
     }
 
@@ -347,7 +354,22 @@ struct CardEditorView: View {
         }
         draft.apply(to: target, in: context)
         try? context.save()
-        dismiss()
+        sync.upload(target)
+        let cardID = target.id
+        let loadsStores = target.findsStoresAutomatically && CardText.normalizedName(target.searchQuery).count >= 2
+        guard loadsStores else {
+            dismiss()
+            return
+        }
+        isSavingCard = true
+        storeLoad = Task { @MainActor in
+            await Task.yield()
+            await BrandStoreCache.ensureStores(for: cardID, in: context)
+            guard !Task.isCancelled else { return }
+            isSavingCard = false
+            storeLoad = nil
+            dismiss()
+        }
     }
 
     private static func logoData(from image: UIImage) -> Data? {
@@ -364,4 +386,32 @@ private enum ImportStatus: Equatable {
     case reading
     case found(String)
     case failed(String)
+}
+
+private struct PhotoSourceLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.title3)
+            Text(title)
+                .font(.caption.weight(.medium))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+}
+
+/// Flat fill for the photo actions. Not Liquid Glass.
+private struct EvenFillButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.primary)
+            .background(
+                Theme.surface.opacity(configuration.isPressed ? 0.72 : 1),
+                in: .rect(cornerRadius: Theme.cornerRadius, style: .continuous)
+            )
+    }
 }
