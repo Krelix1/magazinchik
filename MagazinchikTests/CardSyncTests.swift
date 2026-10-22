@@ -110,6 +110,26 @@ struct CardSyncTests {
         #expect(AccountAuthForm.rejection(mode: .createAccount, email: "a@b.c", password: "secret", confirmation: "secret") == nil)
     }
 
+    @Test func googleMarkKeepsBrandColors() {
+        #expect([GoogleMark.blue, GoogleMark.red, GoogleMark.yellow, GoogleMark.green] == [
+            "4285F4", "EA4335", "FBBC05", "34A853",
+        ])
+        let box = CGRect(x: 0, y: 0, width: 18, height: 18)
+        var union = CGRect.null
+        for source in [GoogleMark.redPath, GoogleMark.bluePath, GoogleMark.yellowPath, GoogleMark.greenPath] {
+            let bounds = GoogleLogoPath.shape(source, in: box).boundingRect
+            #expect(bounds.width > 1)
+            #expect(bounds.height > 1)
+            #expect(bounds.minX >= -0.5)
+            #expect(bounds.minY >= -0.5)
+            #expect(bounds.maxX <= 18.5)
+            #expect(bounds.maxY <= 18.5)
+            union = union.union(bounds)
+        }
+        #expect(union.width > 16)
+        #expect(union.height > 16)
+    }
+
     @Test func googleSignInNeedsRealClientIDs() {
         #expect(GoogleSignInConfig.read(from: [:]) == nil)
         #expect(GoogleSignInConfig.read(from: ["CLIENT_ID": ""]) == nil)

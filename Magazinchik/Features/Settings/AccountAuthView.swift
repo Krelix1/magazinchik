@@ -95,7 +95,7 @@ struct AccountAuthView: View {
                         }
                     }
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: 0) {
                         Button {
                             Task { await submit() }
                         } label: {
@@ -110,21 +110,10 @@ struct AccountAuthView: View {
                         .disabled(busy)
 
                         if sync.googleSignInAvailable {
-                            Button {
-                                Task { await submitGoogle() }
-                            } label: {
-                                Text(googleInFlight ? "Вход…" : "Продолжить с Google")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(Color.white.opacity(busy ? 0.45 : 1))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(
-                                        Color(hex: "161618").opacity(busy ? 0.45 : 1),
-                                        in: .rect(cornerRadius: 22, style: .continuous)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(busy)
+                            googleDivider
+                                .padding(.top, 20)
+                            googleButton
+                                .padding(.top, 16)
                         }
                     }
 
@@ -169,6 +158,47 @@ struct AccountAuthView: View {
         .onChange(of: sync.accountEmail) { _, email in
             if email != nil { dismiss() }
         }
+    }
+
+    private var googleDivider: some View {
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(Color.white.opacity(0.12))
+                .frame(height: 1)
+                .frame(maxWidth: .infinity)
+            Text("или")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Rectangle()
+                .fill(Color.white.opacity(0.12))
+                .frame(height: 1)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var googleButton: some View {
+        Button {
+            Task { await submitGoogle() }
+        } label: {
+            ZStack {
+                Text(googleInFlight ? "Вход…" : "Продолжить с Google")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.white)
+                    .frame(maxWidth: .infinity)
+                GoogleMark()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 16)
+            }
+            .padding(.vertical, 16)
+            .background(Color(hex: "161618"), in: .rect(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+            }
+            .opacity(busy ? 0.45 : 1)
+        }
+        .buttonStyle(GooglePressButtonStyle())
+        .disabled(busy)
     }
 
     private var emailField: some View {
@@ -267,5 +297,14 @@ struct AccountAuthView: View {
         if sync.accountEmail == nil {
             message = sync.lastError
         }
+    }
+}
+
+/// Press shrinks the Google button. The fill and the G stay the same color.
+private struct GooglePressButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
